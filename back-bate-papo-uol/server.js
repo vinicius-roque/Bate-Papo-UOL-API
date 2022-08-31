@@ -23,8 +23,9 @@ server.get('/participants', (req, res) => {
 server.post('/messages', (req, res) => {
     const { to, text, type } = req.body;
     
-    if((to === "" || text === "") || (type !== "message" || type !== "private_message") || from === false) {
+    if((to === "" || text === "") || (type !== "message" || type !== "private_message") || from !== true) {
         res.status(422);
+        return;
     }
 
     res.status(201);
@@ -33,6 +34,17 @@ server.post('/messages', (req, res) => {
 server.get('/messages', (req, res) => {
     const { text } = req.body;
     res.send(text);
+});
+
+server.post('/status', (req, res) => {
+    const { User } = req.header;
+    
+    if(User !== true) {
+        res.status(404);
+        return;
+    }
+    
+    res.send(200);
 });
 
 server.listen(5000, () => console.log("Listening on port 5000"));
