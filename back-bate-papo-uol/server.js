@@ -10,11 +10,19 @@ server.use(cors());
 
 const mongoClient = new MongoClient(process.env.MONGO_URI);
 
+const names = [];
+
 server.post('/participants', (req, res) => {
     const { name } = req.body;
 
     if(name === "") {
         res.status(422);
+    }
+
+    const nomeJaExistente = names.find(n => n.name === req.name);
+    if(nomeJaExistente) {
+        res.status(409);
+        return;
     }
 
     res.send(name);
