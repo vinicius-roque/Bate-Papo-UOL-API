@@ -19,6 +19,13 @@ const participantsSchema = joi.object({
     name: joi.string().min(1).required()
 });
 
+const messagesSchema = joi.object({
+    to: joi.string().min(1).required(),
+    text: joi.string().min(1).required(),
+    type: joi.string().valid("message", "private_message").required(),
+    
+});
+
 server.post('/participants', async (req, res) => {
     const participantsValidation = participantsSchema.validate(req.body, { abortEarly: false });
     if(participantsValidation.error) {
@@ -89,15 +96,34 @@ server.get('/participants', async (req, res) => {
     }
 });
 
-server.post('/messages', (req, res) => {
+server.post('/messages', async (req, res) => {
+    const messageValidation = messagesSchema.validate(req.body, { abortEarly: false });
+    if(messageValidation.error) {
+        const errors = messageValidation.error.details.map(error => error.message);
+        res.status(422).send(errors);
+        return; 
+    }
+
+    const { user } = req.headers;
     const { to, text, type } = req.body;
-    
-    if((to === "" || text === "") || (type !== "message" || type !== "private_message") || from !== true) {
-        res.status(422);
+
+    if(!await checkExistingParticipant(user)) {
+        res.sendStatus(422);
         return;
     }
 
-    res.status(201);
+    try {
+        await db.collection("messages").insertOne({
+            from: user,
+            to,
+            text,
+            type,
+            time: catchTime(true)
+        });
+        res.sendStatus(201);
+    } catch (error) {
+        res.status(500).send(error);
+    }
 });
 
 server.get('/messages', (req, res) => {
