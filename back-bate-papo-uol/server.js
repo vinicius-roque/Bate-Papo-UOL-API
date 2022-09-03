@@ -80,9 +80,13 @@ function catchTime(formatted = false) {
     return time;
 }
 
-server.get('/participants', (req, res) => {
-    const { name } = req.body;
-    res.send(name);
+server.get('/participants', async (req, res) => {
+    try {
+        const dbAnswer = await db.collection("participants").find().toArray();
+        res.send(dbAnswer);
+    } catch (error) {
+        res.status(500).send(error);
+    }
 });
 
 server.post('/messages', (req, res) => {
