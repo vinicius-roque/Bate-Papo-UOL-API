@@ -1,5 +1,7 @@
 import express from "express";
 import cors from "cors";
+import joi from "joi";
+import dayjs from "dayjs";
 import { MongoClient } from "mongodb";
 import dotenv from 'dotenv';
 dotenv.config();
@@ -9,24 +11,74 @@ server.use(express.json());
 server.use(cors());
 
 const mongoClient = new MongoClient(process.env.MONGO_URI);
+let db;
+const dbName = 'liveChat';
+mongoClient.connect().then(() => db = mongoClient.db(dbName));
 
-const names = [];
+const participantsSchema = joi.object({
+    name: joi.string().min(1).required()
+});
 
-server.post('/participants', (req, res) => {
-    const { name } = req.body;
-
-    if(name === "") {
-        res.status(422);
+server.post('/participants', async (req, res) => {
+    const participantsValidation = participantsSchema.validate(req.body, { abortEarly: false });
+    if(participantsValidation.error) {
+        const errors = participantsValidation.error.details.map(error => error.message);
+        res.status(422).send(errors);
+        return;
     }
 
-    const nomeJaExistente = names.find(n => n.name === req.name);
-    if(nomeJaExistente) {
-        res.status(409);
-        return;
+    const { name } = req.body;
+
+    if(await checkExistingParticipant(name)) {
+        return res.sendStatus(409)
+    }
+
+    try {
+        await db.collection("participants").insertOne({
+            name, 
+            lastStatus: catchTime()
+        })
+        await db.collection("messages").insertOne({
+            from: name,
+            to: "Todos", 
+            text: "entra na sala...",
+            type: "status",
+            time: catchTime(true)
+        });
+
+        res.sendStatus(201)
+    } catch (error) {
+        res.status(500).send(error);
     }
 
     res.send(name);
 });
+
+async function checkExistingParticipant(name) {
+    let answer;
+    try {
+        const existingParticipant = await db.collection("participants").findOne({name});
+
+        if(existingParticipant !== null) {
+            answer = true;
+        } else {
+            answer = false;
+        }
+    } catch (error) {
+        console.log(error);
+        response = error;
+    }
+    return answer;
+}
+
+function catchTime(formatted = false) {
+    const time = Date.now();
+    
+    if(formatted) {
+        return dayjs(time).format("HH:mm:ss");
+    }
+    return time;
+}
 
 server.get('/participants', (req, res) => {
     const { name } = req.body;
