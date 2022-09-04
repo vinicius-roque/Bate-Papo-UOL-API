@@ -126,9 +126,19 @@ server.post('/messages', async (req, res) => {
     }
 });
 
-server.get('/messages', (req, res) => {
-    const { text } = req.body;
-    res.send(text);
+server.get('/messages', async (req, res) => {
+    const { limit } = req.query;
+    const { user } = req.headers;
+
+    try {
+        const dbMessages = await db.collection('messages').find().toArray();
+        const selectedMessages = dbMessages.filter(message => message.to === user || message.from === user|| message.to === "Todos");
+        const lastMessages = limit ? selectedMessages.slice(-limit) : selectedMessages;
+
+        res.send(lastMessages);
+    } catch (error) {
+        res.status(500).send(error);
+    }
 });
 
 server.post('/status', (req, res) => {
