@@ -153,7 +153,7 @@ server.post('/status', async (req, res) => {
         await db.collection("participants").updateOne(
             {name: user},
             { $set: {lastStatus: catchTime()}},
-            function (erro, res) {}
+            function () {}
         );
         res.sendStatus(200);
     } catch (error) {
