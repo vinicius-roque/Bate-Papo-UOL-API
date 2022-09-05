@@ -73,7 +73,7 @@ async function checkExistingParticipant(name) {
         }
     } catch (error) {
         console.log(error);
-        response = error;
+        answer = error;
     }
     return answer;
 }
