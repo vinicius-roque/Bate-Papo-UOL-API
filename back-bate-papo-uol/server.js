@@ -161,4 +161,32 @@ server.post('/status', async (req, res) => {
     }
 });
 
+setInterval(async () => {
+    try {
+        const participant = await db.collection("participant").find().toArray();
+
+        participant.forEach(async participants => {
+            if(inactive(participants)) {
+                await db.collection("participants").deleteOne({ _id: participants._id });
+        
+                await db.collection("messages").insertOne({
+                    from: participants.name,
+                    to: "Todos",
+                    text: "sai da sala...",
+                    type: "status",
+                    time: catchTime(true)
+                })}
+        });
+    } catch (error) {
+        console.log(error) 
+    }
+}, 15000);
+
+function inactive(user) {
+    if(catchTime() - user.lastStatus > 10000) {
+        return true;
+    }
+    return false;
+}
+
 server.listen(5000, () => console.log("Listening on port 5000"));
