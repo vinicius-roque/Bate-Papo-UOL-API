@@ -141,15 +141,24 @@ server.get('/messages', async (req, res) => {
     }
 });
 
-server.post('/status', (req, res) => {
-    const { User } = req.header;
+server.post('/status', async (req, res) => {
+    const { user } = req.headers;
     
-    if(User !== true) {
-        res.status(404);
+    if(await checkExistingParticipant(user)) {
+        res.sendStatus(404);
         return;
     }
-    
-    res.send(200);
+
+    try {
+        await db.collection("participants").updateOne(
+            {name: user},
+            { $set: {lastStatus: catchTime()}},
+            function (erro, res) {}
+        );
+        res.sendStatus(200);
+    } catch (error) {
+        res.status(500).send(error)
+    }
 });
 
 server.listen(5000, () => console.log("Listening on port 5000"));
